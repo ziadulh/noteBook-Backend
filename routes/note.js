@@ -24,7 +24,7 @@ router.post('/create', [
             user: req.user.id
         });
         if(note){
-            return res.status(500).json({message: "Note has been saved successfully!"});
+            return res.status(200).json({message: "Note has been saved successfully!"});
         }
     } catch (error) {
         return res.status(400).json({error});
@@ -41,7 +41,7 @@ router.get('/', authUser, async (req, res) => {
         }else{
             notes = await Note.find({user: req.user.id});
         }
-        return res.status(500).json(notes);
+        return res.status(200).json(notes);
 
     } catch (error) {
         return res.status(400).json(error.message);
@@ -53,7 +53,7 @@ router.get('/:id', authUser, async (req, res) => {
     try {
         const note = await Note.findById(req.params.id);
         if(note.user == req.user.id || req.user.type == 'Admin'){
-            return res.status(500).json(note);
+            return res.status(200).json(note);
         }else{
             return res.status(401).json({error: "You are not authorized"})
         }
@@ -73,7 +73,7 @@ router.patch('/:id', authUser, async (req, res) => {
             note.description = description;
             note.tag = tag;
             await note.save();
-            return res.status(500).json({message: "successfully updated!"});
+            return res.status(200).json({message: "successfully updated!"});
         }else{
             return res.status(401).json({error: "You are not authorized"})
         }
@@ -82,12 +82,12 @@ router.patch('/:id', authUser, async (req, res) => {
     }
 });
 
-// getting a note
+// delete a note
 router.delete('/:id', authUser, async (req, res) => {
     try {
         const note = await Note.findByIdAndDelete(req.params.id);
         if(note){
-            return res.status(500).json({message: "successfully updated!"});
+            return res.status(200).json({message: "successfully deleted!", _id: note._id});
         }else{
             return res.status(401).json({error: "You are not authorized"})
         }
