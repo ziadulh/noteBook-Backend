@@ -14,7 +14,7 @@ router.post('/create', [
 ], async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return res.status(400).json({ success: false, errors: errors.array() });
     }
 
     try{
@@ -23,7 +23,7 @@ router.post('/create', [
       //waiting for checking existing user 
       let user = await User.findOne({ email: req.body.email });
       if(user){
-        return res.status(400).send({error: "this email is already exist!"});
+        return res.status(400).send({success: false, msg: "this email is already exist!"});
       }
   
       //storing user and waiting for getting this done
@@ -34,13 +34,16 @@ router.post('/create', [
         type: req.body.type,
       });
       const data = { user : {
-        id: user.id,
+        _id: user.id,
+        name: user.name,
+        email: user.email,
         type: user.type
       }};
       const authToken = jwt.sign(data, JWT_SECRET);
-      return res.json(authToken);
+      return res.status(200).send({success: true, data: data, msg: "User added successfully!"});
+      // return res.json(authToken);
     }catch(error){
-      return res.status(400).json(error.message);
+      return res.status(400).json({success: false, errors: error.message});
     }
 });
 
@@ -48,27 +51,29 @@ router.post('/create', [
 router.post('/login', [
   body('email', 'Enter a valid email').isEmail(),
 ], async (req, res) => {
+  let status = false;
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(400).json({ status, errors: errors.array() });
   }
 
   try {
     const user = await User.findOne({email: req.body.email})
     if(!user){
-      return res.status(400).json({"error" : "credential's doesen.t match"})
+      return res.status(400).json({status, errors : [{msg : "credential's doesen.t match"}]})
     }
     const {email, password} = req.body;
     const comparePassword = await bcrypt.compare(password, user.password);
     if(!comparePassword){
-      return res.status(400).json({"error" : "credential's doesen.t match"});
+      return res.status(400).json({status, errors : [{msg : "credential's doesen.t match"}]});
     }
     const data = { user : {
       id: user.id,
       type: user.type
     }};
     const authToken = jwt.sign(data, JWT_SECRET);
-    return res.json(authToken);
+    status = true; 
+    return res.json({status, authToken});
   }catch(error){
     // console.log(error.message);
     return res.status(500).send("Internal server error");
@@ -80,7 +85,7 @@ router.get('/:id', authUser, async (req, res) => {
   try {
       const user = await User.findById(req.params.id).select("-password");
       if(user.id == req.user.id || req.user.type == 'Admin'){
-          return res.status(500).json(user);
+          return res.status(200).json(user);
       }else{
           return res.status(401).json({error: "You are not authorized"})
       }
@@ -110,7 +115,7 @@ router.patch('/:id', [
           if(pass) user.password = pass;
           if(type) user.type = type;
           await user.save();
-          return res.status(500).json({message: "successfully updated!"});
+          return res.status(200).json({message: "successfully updated!"});
       }else{
           return res.status(401).json({error: "You are not authorized"})
       }
@@ -129,7 +134,7 @@ router.get('/', authUser, async (req, res) => {
       }else{
           users = await User.find({user: req.user.id});
       }
-      return res.status(500).json(users);
+      return res.status(200).json(users);
 
   } catch (error) {
       return res.status(400).json(error.message);
@@ -141,7 +146,7 @@ router.delete('/:id', authUser, async (req, res) => {
   try {
       const user = await User.findByIdAndDelete(req.params.id);
       if(user){
-          return res.status(500).json({message: "successfully updated!"});
+          return res.status(200).json({message: "successfully updated!"});
       }else{
           return res.status(401).json({error: "You are not authorized"})
       }

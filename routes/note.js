@@ -6,8 +6,8 @@ const authUser  = require('../middleware/authUser');
 
 // creating new note
 router.post('/create', [
-    body('title', 'Enter a Ttile for Note'),
-    body('description', 'Enter a Description for Note'),
+    body('title', 'Title must be at least 5 chars long').isLength({ min: 5 }),
+    body('description', 'Description must be at least 5 chars long').isLength({ min: 5 }),
 ], authUser, async (req, res) => {
     // checking validation for note field
     const errors = validationResult(req);
@@ -24,7 +24,7 @@ router.post('/create', [
             user: req.user.id
         });
         if(note){
-            return res.status(200).json({message: "Note has been saved successfully!"});
+            return res.status(200).json({message: "Note has been saved successfully!", note: note});
         }
     } catch (error) {
         return res.status(400).json({error});
@@ -64,8 +64,15 @@ router.get('/:id', authUser, async (req, res) => {
 });
 
 // updating note
-router.patch('/:id', authUser, async (req, res) => {
+router.patch('/:id', [
+        body('title', 'Title must be at least 5 and less than 50 characters').isLength({ min: 5, max: 50 }),
+        body('description', 'Description must be at least 5 chars long').isLength({ min: 5}),
+    ],authUser, async (req, res) => {
     try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
         const {title, description, tag} = req.body;
         const note = await Note.findById(req.params.id);
         if(note.user == req.user.id || req.user.type == 'Admin'){
